@@ -1,74 +1,33 @@
 @host = http://localhost:3000
-@userId = 1
 @productId = 5
 
-GET {{host}}/products
-
-POST {{host}}/products
+### Login como admin (para crear el producto)
+# @name loginAdmin
+POST {{host}}/auth/login
 Content-Type: application/json
 
 {
-  "category_id": null,
-  "brand": "Xiaomi",
-  "model": "Redmi Note 13",
-  "description": "test",
-  "price": 299,
-  "stock": 50,
-  "image_url": null
+  "email": "admin@utn.edu",
+  "password": "adminSecurePassword"
 }
 
-GET {{host}}/api/carts/{{userId}}
+###
 
-POST {{host}}/api/carts/{{userId}}/items
+@adminToken = {{loginAdmin.response.body.token}}
+
+### Login con un usuario ya existente
+# @name loginUser
+POST {{host}}/auth/login
 Content-Type: application/json
 
 {
-  "productId": {{productId}},
-  "quantity": 2
+  "email": "juan.perez@example.com",
+  "password": "password123"
 }
 
-POST {{host}}/api/carts/{{userId}}/items
-Content-Type: application/json
+###
 
-{
-  "productId": {{productId}},
-  "quantity": 2
-}
+@userToken = {{loginUser.response.body.token}}
+@userId = 1
 
-PATCH {{host}}/api/carts/{{userId}}/items/{{productId}}
-Content-Type: application/json
-
-{
-  "quantity": 7
-}
-
-DELETE {{host}}/api/carts/{{userId}}/items/{{productId}}
-
-DELETE {{host}}/api/carts/{{userId}}/items
-
-POST {{host}}/api/carts/{{userId}}/items
-Content-Type: application/json
-
-{
-  "productId": {{productId}},
-  "quantity": 0
-}
-
-POST {{host}}/api/carts/{{userId}}/items
-Content-Type: application/json
-
-{
-  "productId": 999999,
-  "quantity": 1
-}
-
-PATCH {{host}}/api/carts/{{userId}}/items/999999
-Content-Type: application/json
-
-{
-  "quantity": 3
-}
-
-DELETE {{host}}/api/carts/{{userId}}/items/999999
-
-GET {{host}}/api/carts/abc
+### resto de las requests igual, usando {{userId}} y {{userToken}}

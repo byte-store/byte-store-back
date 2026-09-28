@@ -4,6 +4,7 @@ import { config } from "./config";
 import productRoutes from "./product/product.routes";
 import userRoutes from "./users/users.routes";
 import { buildCartRouter } from "./cart/cart.routes";
+import authRoutes from "./auth/auth.routes";
 
 export class App {
   public readonly app: Application;
@@ -11,6 +12,8 @@ export class App {
   constructor(pool: Pool) {
     this.app = express();
     this.app.use(express.json());
+    this.app.use("/auth", authRoutes);
+
     this.app.use("/products", productRoutes);
     this.app.use("/users", userRoutes);
     this.app.use("/api/carts", buildCartRouter(pool));

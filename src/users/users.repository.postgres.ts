@@ -1,5 +1,5 @@
 import { pool } from "../config";
-import { User } from "./users.entity";
+import { User, UserWithPassword } from "./users.entity";
 import { UserRepository } from "./users.repository.interface";
 
 export class PostgresUserRepository implements UserRepository {
@@ -38,9 +38,7 @@ export class PostgresUserRepository implements UserRepository {
     return null;
   }
 
-  async createUser(
-    user: Omit<User, "id" | "create_time"> & { password?: string },
-  ): Promise<User> {
+  async createUser(user: Omit<UserWithPassword, "id">): Promise<User> {
     const query = `
       INSERT INTO users (name, email, password_hash, role) 
       VALUES ($1, $2, $3, $4) 
@@ -63,7 +61,7 @@ export class PostgresUserRepository implements UserRepository {
 
   async updateUser(
     id: string,
-    user: Partial<Omit<User, "id" | "create_time">> & { password?: string },
+    user: Partial<Omit<UserWithPassword, "id">>,
   ): Promise<User | null> {
     const fields: string[] = [];
     const values: any[] = [];
@@ -118,5 +116,23 @@ export class PostgresUserRepository implements UserRepository {
       Number(id),
     ]);
     return result.rowCount !== null && result.rowCount > 0;
+  }
+  async findByEmail(
+    email: string,
+  ): Promise<(User & { passwordHash: string }) | null> {
+    const result = await this.client.query(
+      "SELECT id, name, email, role, password_hash FROM users WHERE email = $1",
+      [email],
+    );
+
+    if (result.rows.length > 0) {
+      const row = result.rows[0];
+      return {
+        ...this.toUser(row),
+        passwordHash: row.password_hash,
+      };
+    }
+
+    return null;
   }
 }

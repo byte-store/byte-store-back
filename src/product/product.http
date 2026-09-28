@@ -1,11 +1,31 @@
-### Listar catálogo completo de productos (acceso público)
-GET http://localhost:3000/products
+### Configuración de Variables
+@baseUrl = http://localhost:3000/products
+@authUrl = http://localhost:3000/auth
+
+### 1. Login como admin
+# @name loginAdmin
+POST {{authUrl}}/login
 Content-Type: application/json
 
-### Crear producto nuevo
-### (Hoy SIN protección - pendiente middleware JWT + rol ADMIN)
-POST http://localhost:3000/products
+{
+  "email": "admin@utn.edu",
+  "password": "adminSecurePassword"
+}
+
+###
+
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 2. Listar catálogo (público, sin token)
+GET {{baseUrl}}
 Content-Type: application/json
+
+###
+
+### 3. Crear producto (requiere token de admin)
+POST {{baseUrl}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
 
 {
     "category_id": null,
@@ -17,33 +37,29 @@ Content-Type: application/json
     "image_url": "https://ejemplo.com/redmi-note-18.jpg"
 }
 
-### Caso de error: falta un campo obligatorio (debería devolver 400)
-POST http://localhost:3000/products
+###
+
+### 4. Intentar crear producto SIN token (debe dar 401)
+POST {{baseUrl}}
 Content-Type: application/json
 
 {
-    "brand": "Xiaomi",
-    "description": "Falta model, price y stock"
+    "brand": "Hacker",
+    "model": "Intento sin token",
+    "description": "No debería crearse",
+    "price": 1,
+    "stock": 1
 }
 
-### Caso de error: precio negativo (debería devolver 400)
-POST http://localhost:3000/products
+###
+
+### 5. Eliminar producto (requiere token de admin)
+DELETE {{baseUrl}}/4
 Content-Type: application/json
+Authorization: Bearer {{adminToken}}
 
-{
-    "brand": "Xiaomi",
-    "model": "Redmi 14",
-    "description": "Precio inválido a propósito",
-    "price": -100,
-    "stock": 10,
-    "image_url": null
-}
+###
 
-### Eliminar producto por id (reemplazá el 1 por un id real)
-### (Hoy SIN protección - pendiente middleware JWT + rol ADMIN)
-DELETE http://localhost:3000/products/4
-Content-Type: application/json
-
-### Caso de error: eliminar un id que no existe (debería devolver 404)
-DELETE http://localhost:3000/products/99999
+### 6. Intentar eliminar SIN token (debe dar 401)
+DELETE {{baseUrl}}/4
 Content-Type: application/json
