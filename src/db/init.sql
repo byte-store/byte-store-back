@@ -4,7 +4,7 @@
 -- =========================================================
 -- =========================================================
 -- TABLA: users
--- Almacena tanto a CLIENTE como ADMIN. El rol se valida
+-- Almacena tanto a "user" como "admin". El rol se valida
 -- a nivel DB (CHECK) y luego se replica en el JWT.
 -- =========================================================
 CREATE TABLE IF NOT EXISTS users (
@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
                         CHECK (role IN ('user', 'admin')),
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- El email es único sin distinguir mayúsculas/minúsculas
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
 
 -- =========================================================
 -- TABLA: categories

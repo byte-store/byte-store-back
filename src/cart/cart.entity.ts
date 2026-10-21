@@ -9,5 +9,4 @@ export interface CartItem {
 export  interface Cart {
     userId: number;
     items: CartItem[];
-    total?: number;
 }

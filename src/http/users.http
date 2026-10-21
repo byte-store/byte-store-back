@@ -1,16 +1,18 @@
 ### Configuración de Variables
-@baseUrl = http://localhost:3000/users
-@authUrl = http://localhost:3000/auth
-@adminSecretKey = Adnsu8@we
+# Correr las requests en orden. Cada corrida crea su propio usuario y admin
+# (con email único) y los borra al final, así se puede repetir sin errores.
+@baseUrl = http://localhost:3000/api/users
+@authUrl = http://localhost:3000/api/auth
+@adminSecretKey = {{$dotenv ADMIN_SECRET_KEY}}
 
 ### 1. Crear un usuario común
 # @name createUser
-POST {{baseUrl}}/
+POST {{baseUrl}}
 Content-Type: application/json
 
 {
   "name": "Este Perez",
-  "email": "Este.perez@example.com",
+  "email": "este.perez.{{$timestamp}}@example.com",
   "password": "password123"
 }
 
@@ -24,7 +26,7 @@ POST {{authUrl}}/login
 Content-Type: application/json
 
 {
-  "email": "Este.perez@example.com",
+  "email": "{{createUser.response.body.email}}",
   "password": "password123"
 }
 
@@ -32,27 +34,27 @@ Content-Type: application/json
 
 @userToken = {{loginUser.response.body.token}}
 
-### 3. Obtener el usuario creado, con su propio token(mal armado-expirado,daría 401/403)
+### 3. Obtener el usuario creado con su propio token (200)
 GET {{baseUrl}}/{{createdUserId}}
-Content-Type: application/json
 Authorization: Bearer {{userToken}}
 
-###
-
 ### 4. Crear un Administrador
+# @name createAdmin
 POST {{baseUrl}}/admin
 Content-Type: application/json
 
 {
   "name": "Admin Universidad",
-  "email": "admin@utn.edu",
+  "email": "admin.{{$timestamp}}@utn.edu",
   "password": "adminSecurePassword",
   "secretKey": "{{adminSecretKey}}"
 }
 
 ###
 
-### 5. Intentar crear Administrador con clave incorrecta (debe dar 403)
+@createdAdminId = {{createAdmin.response.body.id}}
+
+### 5. Intentar crear Administrador con clave incorrecta (403)
 POST {{baseUrl}}/admin
 Content-Type: application/json
 
@@ -63,15 +65,13 @@ Content-Type: application/json
   "secretKey": "clave_incorrecta_2026"
 }
 
-###
-
 ### 6. Login como admin
 # @name loginAdmin
 POST {{authUrl}}/login
 Content-Type: application/json
 
 {
-  "email": "admin@utn.edu",
+  "email": "{{createAdmin.response.body.email}}",
   "password": "adminSecurePassword"
 }
 
@@ -80,11 +80,8 @@ Content-Type: application/json
 @adminToken = {{loginAdmin.response.body.token}}
 
 ### 7. Obtener todos los usuarios (con token de admin)
-GET {{baseUrl}}/
-Content-Type: application/json
+GET {{baseUrl}}
 Authorization: Bearer {{adminToken}}
-
-###
 
 ### 8. Actualizar datos del usuario creado
 PUT {{baseUrl}}/{{createdUserId}}
@@ -95,16 +92,23 @@ Authorization: Bearer {{userToken}}
   "name": "Juan Carlos Perez"
 }
 
-###
-
-### 9. Eliminar al usuario creado
-DELETE {{baseUrl}}/{{createdUserId}}
+### 9. Intentar auto-asignarse rol admin (403)
+PUT {{baseUrl}}/{{createdUserId}}
 Content-Type: application/json
 Authorization: Bearer {{userToken}}
 
-###
+{
+  "role": "admin"
+}
 
-### 10. Buscar al usuario eliminado (debe dar 404, con token de admin)
+### 10. Eliminar al usuario creado
+DELETE {{baseUrl}}/{{createdUserId}}
+Authorization: Bearer {{userToken}}
+
+### 11. Buscar al usuario eliminado (404, con token de admin)
 GET {{baseUrl}}/{{createdUserId}}
-Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+### 12. Limpieza: eliminar el admin creado
+DELETE {{baseUrl}}/{{createdAdminId}}
 Authorization: Bearer {{adminToken}}

@@ -1,15 +1,16 @@
-// src/auth/auth.middleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
+import { Role } from "../users/users.entity";
 
 export interface AuthRequest extends Request {
   usuario?: {
-    id: string;
+    id: number;
     email: string;
-    role: string;
+    role: Role;
   };
 }
+
 export function verificarPropietario(
   req: AuthRequest,
   res: Response,
@@ -19,20 +20,20 @@ export function verificarPropietario(
     return next();
   }
 
-  if (String(req.usuario?.id) !== req.params.userId) {
+  if (req.usuario?.id !== Number(req.params.userId)) {
     return res
       .status(403)
-      .json({ mensaje: "No podés operar sobre este recurso" });
+      .json({ message: "No podés operar sobre este recurso" });
   }
   next();
 }
 
-export function requiereRol(rolPermitido: string) {
+export function requiereRol(rolPermitido: Role) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.usuario?.role !== rolPermitido) {
       return res
         .status(403)
-        .json({ mensaje: "No tenés permisos para esta acción" });
+        .json({ message: "No tenés permisos para esta acción" });
     }
     next();
   };
@@ -43,19 +44,22 @@ export function verificarToken(
   res: Response,
   next: NextFunction,
 ) {
-  const authHeader = req.headers["authorization"];
+  const [scheme, token] = (req.headers["authorization"] ?? "").split(" ");
 
-  if (!authHeader) {
-    return res.status(401).json({ mensaje: "Token no proporcionado" });
+  if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({ message: "Token no proporcionado" });
   }
 
-  const token = authHeader.split(" ")[1];
-
-  jwt.verify(token, config.jwtSecret, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ mensaje: "Token inválido o expirado" });
-    }
-    req.usuario = decoded as AuthRequest["usuario"];
-    next();
-  });
+  jwt.verify(
+    token,
+    config.jwtSecret,
+    { algorithms: ["HS256"] },
+    (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: "Token inválido o expirado" });
+      }
+      req.usuario = decoded as AuthRequest["usuario"];
+      next();
+    },
+  );
 }
