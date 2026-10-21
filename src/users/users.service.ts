@@ -1,5 +1,6 @@
 import { UserRepository } from "./users.repository.interface";
-import { User } from "./users.entity";
+import { User, UserWithPassword } from "./users.entity";
+import bcrypt from "bcrypt";
 
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
@@ -16,15 +17,19 @@ export class UserService {
     return this.userRepository.findUserById(id);
   }
 
-  async createUser(userData: Omit<User, "id">): Promise<User> {
+  async createUser(userData: Omit<UserWithPassword, "id">): Promise<User> {
     this.validateUserData(userData);
-
-    return this.userRepository.createUser(userData);
+    const SALT_ROUNDS = 10;
+    const passwordHash = await bcrypt.hash(userData.password, SALT_ROUNDS);
+    return this.userRepository.createUser({
+      ...userData,
+      password: passwordHash,
+    });
   }
 
   async updateUser(
     id: string,
-    userData: Partial<Omit<User, "id">>,
+    userData: Partial<Omit<UserWithPassword, "id">>,
   ): Promise<User | null> {
     if (!id || id.trim().length === 0) {
       throw new Error("El ID de usuario es obligatorio.");
@@ -40,7 +45,6 @@ export class UserService {
 
     return this.userRepository.deleteUser(id);
   }
-
   private validateUserData(userData: Partial<User>, isUpdate = false): void {
     if (!isUpdate || userData.name !== undefined) {
       if (!userData.name || userData.name.trim().length < 3) {
@@ -49,7 +53,7 @@ export class UserService {
         );
       }
     }
-    // 2. Validar Email
+
     if (!isUpdate || userData.email !== undefined) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!userData.email || !emailRegex.test(userData.email)) {
@@ -57,7 +61,6 @@ export class UserService {
       }
     }
 
-    // 3. Validar Rol
     if (!isUpdate || userData.role !== undefined) {
       const validRoles = ["user", "admin"];
       if (!userData.role || !validRoles.includes(userData.role)) {

@@ -19,10 +19,10 @@ export class UserController {
   }
 
   public async getById(
-    req: Request<{ id: string }>,
+    req: Request<{ userId: string }>,
     res: Response,
   ): Promise<void> {
-    const id = req.params.id;
+    const id = req.params.userId;
     if (!id || id.trim().length === 0) {
       res.status(400).json({ message: "No es valido el ID de usuario" });
       return;
@@ -112,10 +112,10 @@ export class UserController {
   }
 
   public async updateUser(
-    req: Request<{ id: string }>,
+    req: Request<{ userId: string }>,
     res: Response,
   ): Promise<void> {
-    const id = req.params.id as string;
+    const id = req.params.userId as string;
     if (!id || id.trim().length === 0) {
       res.status(400).json({ message: "ID inválido" });
       return;
@@ -135,10 +135,10 @@ export class UserController {
   }
 
   public async deleteUser(
-    req: Request<{ id: string }>,
+    req: Request<{ userId: string }>,
     res: Response,
   ): Promise<void> {
-    const id = req.params.id;
+    const id = req.params.userId;
 
     if (!id || id.trim().length === 0) {
       res.status(400).json({ error: "No es valido el ID del usuario" });
