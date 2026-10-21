@@ -2,6 +2,9 @@ export interface User {
   id?: number;
   name: string;
   email: string;
-  password?: string;
   role: "user" | "admin";
+}
+
+export interface UserWithPassword extends User {
+  password: string;
 }
