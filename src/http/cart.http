@@ -2,7 +2,7 @@
 @userId = 10
 @cartsUrl = {{host}}/api/carts
 # usar id de un producto que exista
-@productId = 2
+@productId = 1
 
 ### Login (obtiene el token)
 # @name login

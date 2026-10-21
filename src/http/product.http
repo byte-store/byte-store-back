@@ -10,6 +10,7 @@ Content-Type: application/json
 {
   "email": "admin@utn.edu",
   "password": "adminSecurePassword"
+
 }
 
 ###
@@ -24,6 +25,7 @@ Content-Type: application/json
 
 ### 3. Crear producto (requiere token de admin)
 POST {{baseUrl}}
+
 Content-Type: application/json
 Authorization: Bearer {{adminToken}}
 
