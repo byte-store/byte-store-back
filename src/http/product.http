@@ -80,17 +80,44 @@ Authorization: Bearer {{adminToken}}
   "stock": 1
 }
 
-### 7. Intentar eliminar SIN token (401)
+### 7. Modificar producto (requiere token de admin, solo cambia los campos enviados)
+PUT {{baseUrl}}/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "price": 750000,
+  "stock": 20
+}
+
+### 8. Intentar modificar SIN token (401)
+PUT {{baseUrl}}/{{productId}}
+Content-Type: application/json
+
+{
+  "price": 1
+}
+
+### 9. Intentar modificar con stock inválido (400)
+PUT {{baseUrl}}/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "stock": -5
+}
+
+### 10. Intentar eliminar SIN token (401)
 DELETE {{baseUrl}}/{{productId}}
 
-### 8. Eliminar el producto creado (requiere token de admin)
+### 11. Eliminar el producto creado (requiere token de admin)
 DELETE {{baseUrl}}/{{productId}}
 Authorization: Bearer {{adminToken}}
 
-### 9. Eliminar de nuevo el mismo producto (404)
+### 12. Eliminar de nuevo el mismo producto (404)
 DELETE {{baseUrl}}/{{productId}}
 Authorization: Bearer {{adminToken}}
 
-### 10. Limpieza: eliminar el admin temporal
+### 13. Limpieza: eliminar el admin temporal
 DELETE {{usersUrl}}/{{createAdmin.response.body.id}}
 Authorization: Bearer {{adminToken}}

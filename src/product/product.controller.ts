@@ -28,6 +28,24 @@ export class ProductController {
     } catch (e) { handleError(e, res); }
   };
 
+  update = async (req: Request, res: Response) => {
+    try {
+      const id = parseId(req.params.id, "id");
+      const { categoryId, brand, model, description, price, stock, imageUrl } =
+        req.body ?? {};
+      const product = await this.service.update(id, {
+        categoryId,
+        brand,
+        model,
+        description,
+        price,
+        stock,
+        imageUrl,
+      });
+      res.json(product);
+    } catch (e) { handleError(e, res); }
+  };
+
   delete = async (req: Request, res: Response) => {
     try {
       const id = parseId(req.params.id, "id");

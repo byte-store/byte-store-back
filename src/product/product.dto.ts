@@ -7,3 +7,6 @@ export interface CreateProductDto {
   stock: number;
   imageUrl: string | null;
 }
+
+// Solo se actualizan los campos que vienen definidos
+export type UpdateProductDto = Partial<CreateProductDto>;

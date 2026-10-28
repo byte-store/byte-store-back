@@ -13,6 +13,7 @@ export function buildProductRouter(pool: Pool): Router {
   const router = Router();
   router.get("/", controller.getAll);
   router.post("/", verificarToken, requiereRol("admin"), controller.create);
+  router.put("/:id", verificarToken, requiereRol("admin"), controller.update);
   router.delete("/:id", verificarToken, requiereRol("admin"), controller.delete);
   return router;
 }
