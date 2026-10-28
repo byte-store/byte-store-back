@@ -10,11 +10,8 @@
     "strict": true,
     "alwaysStrict": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]
 }

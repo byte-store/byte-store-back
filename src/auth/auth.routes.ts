@@ -1,8 +1,15 @@
 import { Router } from "express";
-import { loginController } from "./auth.controller";
+import { Pool } from "pg";
+import { PostgresUserRepository } from "../users/users.repository.postgres";
+import { AuthService } from "./auth.service";
+import { AuthController } from "./auth.controller";
 
-const router = Router();
+export function buildAuthRouter(pool: Pool): Router {
+  const repo = new PostgresUserRepository(pool);
+  const service = new AuthService(repo);
+  const controller = new AuthController(service);
 
-router.post("/login", loginController);
-
-export default router;
+  const router = Router();
+  router.post("/login", controller.login);
+  return router;
+}

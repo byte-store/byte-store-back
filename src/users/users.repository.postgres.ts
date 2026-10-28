@@ -1,138 +1,122 @@
-import { pool } from "../config";
-import { User, UserWithPassword } from "./users.entity";
-import { UserRepository } from "./users.repository.interface";
+import { Pool, QueryResultRow } from "pg";
+import { User, UserWithPasswordHash } from "./users.entity";
+import { IUserRepository, UserData } from "./users.repository.interface";
+import {
+  ConflictError,
+  PG_FOREIGN_KEY_VIOLATION,
+  PG_UNIQUE_VIOLATION,
+} from "../shared/errors";
 
-export class PostgresUserRepository implements UserRepository {
-  private client: typeof pool;
+// Propiedades de la entidad -> columnas de la tabla users
+const COLUMNS: Record<keyof UserData, string> = {
+  name: "name",
+  email: "email",
+  passwordHash: "password_hash",
+  role: "role",
+};
 
-  constructor(client: typeof pool) {
-    this.client = client;
-  }
+export class PostgresUserRepository implements IUserRepository {
+  constructor(private readonly pool: Pool) {}
 
-  // Traduce los datos de la BD al formato de tu Entidad TypeScript
-  private toUser(row: any): User {
+  private toEntity(row: QueryResultRow): User {
     return {
-      id: Number(row.id),
-      name: row.name, // Mapea full_name de la BD a 'name' de tu negocio
+      id: row.id,
+      name: row.name,
       email: row.email,
-      role: row.role === "admin" ? "admin" : "user", // Ahora TS sabe con certeza que esto es "user" | "admin"
+      role: row.role,
     };
   }
 
   async findAll(): Promise<User[]> {
-    // Usamos ALIAS (AS) para mantener la compatibilidad con tu código externo
-    const result = await this.client.query(
-      "SELECT id, name , email, role FROM users",
+    const { rows } = await this.pool.query(
+      "SELECT id, name, email, role FROM users ORDER BY id",
     );
-    return result.rows.map((row: any) => this.toUser(row));
+    return rows.map((r) => this.toEntity(r));
   }
 
-  async findUserById(id: string): Promise<User | null> {
-    const result = await this.client.query(
-      "SELECT id, name , email, role FROM users WHERE id = $1",
-      [Number(id)],
+  async findUserById(id: number): Promise<User | null> {
+    const { rows } = await this.pool.query(
+      "SELECT id, name, email, role FROM users WHERE id = $1",
+      [id],
     );
-    if (result.rows.length > 0) {
-      return this.toUser(result.rows[0]);
-    }
-    return null;
+    return rows.length ? this.toEntity(rows[0]) : null;
   }
 
-  async createUser(user: Omit<UserWithPassword, "id">): Promise<User> {
-    const query = `
-      INSERT INTO users (name, email, password_hash, role) 
-      VALUES ($1, $2, $3, $4) 
-      RETURNING id, name, email, role
-    `;
-
-    // Mapeamos el rol de TS ('user'/'admin') al formato CHECK de Postgres ('CLIENTE'/'ADMIN')
-    const dbRole = user.role === "admin" ? "admin" : "user";
-
-    const values = [
-      user.name,
-      user.email,
-      user.password, // El servicio envía 'password'
-      dbRole,
-    ];
-
-    const result = await this.client.query(query, values);
-    return this.toUser(result.rows[0]);
+  async findByEmail(email: string): Promise<UserWithPasswordHash | null> {
+    const { rows } = await this.pool.query(
+      "SELECT id, name, email, role, password_hash FROM users WHERE LOWER(email) = LOWER($1)",
+      [email.trim()],
+    );
+    if (!rows.length) return null;
+    return { ...this.toEntity(rows[0]), passwordHash: rows[0].password_hash };
   }
 
-  async updateUser(
-    id: string,
-    user: Partial<Omit<UserWithPassword, "id">>,
-  ): Promise<User | null> {
-    const fields: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
-
-    // Diccionario de traducción de propiedades TS -> Columnas SQL
-    const fieldMapping: Record<string, string> = {
-      name: "name",
-      email: "email",
-      password: "password_hash",
-      role: "role",
-    };
-
-    Object.entries(user).forEach(([key, value]) => {
-      if (value !== undefined && fieldMapping[key]) {
-        fields.push(`${fieldMapping[key]} = $${paramCount}`);
-
-        // Traducción especial de valores para el campo de Rol
-        if (key === "role") {
-          values.push(value === "admin" ? "admin" : "user");
-        } else {
-          values.push(value);
-        }
-
-        paramCount++;
+  async createUser(user: UserData): Promise<User> {
+    try {
+      const { rows } = await this.pool.query(
+        `INSERT INTO users (name, email, password_hash, role)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, name, email, role`,
+        [user.name, user.email, user.passwordHash, user.role],
+      );
+      return this.toEntity(rows[0]);
+    } catch (err: any) {
+      if (err?.code === PG_UNIQUE_VIOLATION) {
+        throw new ConflictError("El email ya está registrado");
       }
-    });
+      throw err;
+    }
+  }
+
+  async updateUser(id: number, user: Partial<UserData>): Promise<User | null> {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    for (const [key, column] of Object.entries(COLUMNS)) {
+      const value = user[key as keyof UserData];
+      if (value !== undefined) {
+        values.push(value);
+        fields.push(`${column} = $${values.length}`);
+      }
+    }
 
     if (fields.length === 0) {
       return this.findUserById(id);
     }
 
-    values.push(Number(id));
+    values.push(id);
 
-    const query = `
-      UPDATE users 
-      SET ${fields.join(", ")} 
-      WHERE id = $${paramCount} 
-      RETURNING id, name, email, role
-    `;
-
-    const result = await this.client.query(query, values);
-
-    if (result.rows.length > 0) {
-      return this.toUser(result.rows[0]);
+    try {
+      const { rows } = await this.pool.query(
+        `UPDATE users
+         SET ${fields.join(", ")}
+         WHERE id = $${values.length}
+         RETURNING id, name, email, role`,
+        values,
+      );
+      return rows.length ? this.toEntity(rows[0]) : null;
+    } catch (err: any) {
+      if (err?.code === PG_UNIQUE_VIOLATION) {
+        throw new ConflictError("El email ya está registrado");
+      }
+      throw err;
     }
-    return null;
   }
 
-  async deleteUser(id: string): Promise<boolean> {
-    const result = await this.client.query("DELETE FROM users WHERE id = $1", [
-      Number(id),
-    ]);
-    return result.rowCount !== null && result.rowCount > 0;
-  }
-  async findByEmail(
-    email: string,
-  ): Promise<(User & { passwordHash: string }) | null> {
-    const result = await this.client.query(
-      "SELECT id, name, email, role, password_hash FROM users WHERE email = $1",
-      [email],
-    );
-
-    if (result.rows.length > 0) {
-      const row = result.rows[0];
-      return {
-        ...this.toUser(row),
-        passwordHash: row.password_hash,
-      };
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      const { rowCount } = await this.pool.query(
+        "DELETE FROM users WHERE id = $1",
+        [id],
+      );
+      return (rowCount ?? 0) > 0;
+    } catch (err: any) {
+      if (err?.code === PG_FOREIGN_KEY_VIOLATION) {
+        throw new ConflictError(
+          "El usuario tiene órdenes asociadas y no se puede eliminar",
+        );
+      }
+      throw err;
     }
-
-    return null;
   }
 }

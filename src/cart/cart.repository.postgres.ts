@@ -1,7 +1,12 @@
 import { Pool, QueryResultRow } from "pg";
 import { ICartRepository } from "./cart.repository.interface";
 import { CartItem } from "./cart.entity";
-import { NotFoundError } from "./cart.errors";
+import {
+  NotFoundError,
+  PG_FOREIGN_KEY_VIOLATION,
+  PG_NUMERIC_OUT_OF_RANGE,
+  ValidationError,
+} from "../shared/errors";
 
 export class PostgresCartRepository implements ICartRepository {
   constructor(private readonly pool: Pool) {}
@@ -40,8 +45,12 @@ export class PostgresCartRepository implements ICartRepository {
       );
       return this.toEntity(rows[0]);
     } catch (err: any) {
-      if (err?.code === "23503") {
-        throw new NotFoundError("User o product no existe");
+      if (err?.code === PG_FOREIGN_KEY_VIOLATION) {
+        throw new NotFoundError("El usuario o el producto no existe");
+      }
+      // La suma con la cantidad que ya estaba en el carrito se pasó del máximo
+      if (err?.code === PG_NUMERIC_OUT_OF_RANGE) {
+        throw new ValidationError("La cantidad total supera el máximo permitido");
       }
       throw err;
     }

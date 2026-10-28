@@ -1,17 +1,18 @@
 import { Request, Response } from "express";
-import { login } from "./auth.service";
+import { AuthService } from "./auth.service";
+import { ValidationError } from "../shared/errors";
+import { handleError } from "../shared/http";
 
-export async function loginController(req: Request, res: Response) {
-  const { email, password } = req.body;
+export class AuthController {
+  constructor(private readonly service: AuthService) {}
 
-  if (!email || !password) {
-    return res.status(400).json({ mensaje: "Email y password son requeridos" });
-  }
-
-  try {
-    const token = await login(email, password);
-    res.json({ token });
-  } catch (err) {
-    res.status(401).json({ mensaje: "Credenciales inválidas" });
-  }
+  login = async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body ?? {};
+      if (typeof email !== "string" || typeof password !== "string") {
+        throw new ValidationError("Email y password son requeridos");
+      }
+      res.json({ token: await this.service.login(email, password) });
+    } catch (e) { handleError(e, res); }
+  };
 }

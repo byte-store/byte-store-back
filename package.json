@@ -2,7 +2,7 @@
   "name": "byte-store",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/init.ts",
   "scripts": {
     "dev": "nodemon src/init.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

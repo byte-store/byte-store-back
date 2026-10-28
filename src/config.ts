@@ -17,6 +17,8 @@ export const config = {
   jwtSecret: requireEnv("JWT_SECRET"),
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN ||
     "1h") as SignOptions["expiresIn"],
+  // Opcional: si no está, no se pueden crear administradores
+  adminSecretKey: process.env.ADMIN_SECRET_KEY,
 };
 
 export const pool = new Pool({

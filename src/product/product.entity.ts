@@ -1,12 +1,12 @@
 export interface Product {
-    id: number;
-    category_id: number | null;
-    brand: string;
-    model: string;
-    description: string | null;
-    price: number;
-    stock: number;
-    image_url: string | null;
-    created_at: Date;
-    updated_at: Date;
+  id: number;
+  categoryId: number | null;
+  brand: string;
+  model: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  imageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }

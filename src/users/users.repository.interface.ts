@@ -1,13 +1,12 @@
-import { User, UserWithPassword } from "./users.entity";
+import { User, UserWithPasswordHash } from "./users.entity";
 
-export interface UserRepository {
+export type UserData = Omit<UserWithPasswordHash, "id">;
+
+export interface IUserRepository {
   findAll(): Promise<User[]>;
-  findUserById(id: string): Promise<User | null>;
-  findByEmail(email: string): Promise<(User & { passwordHash: string }) | null>;
-  createUser(user: Omit<UserWithPassword, "id">): Promise<User>;
-  updateUser(
-    id: string,
-    user: Partial<Omit<UserWithPassword, "id">>,
-  ): Promise<User | null>;
-  deleteUser(id: string): Promise<boolean>;
+  findUserById(id: number): Promise<User | null>;
+  findByEmail(email: string): Promise<UserWithPasswordHash | null>;
+  createUser(user: UserData): Promise<User>;
+  updateUser(id: number, user: Partial<UserData>): Promise<User | null>;
+  deleteUser(id: number): Promise<boolean>;
 }

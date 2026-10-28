@@ -1,24 +1,23 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { config, pool } from "../config";
-import { PostgresUserRepository } from "../users/users.repository.postgres";
+import { config } from "../config";
+import { IUserRepository } from "../users/users.repository.interface";
+import { UnauthorizedError } from "../shared/errors";
 
-const userRepository = new PostgresUserRepository(pool);
+export class AuthService {
+  constructor(private readonly userRepository: IUserRepository) {}
 
-export async function login(email: string, password: string) {
-  const usuario = await userRepository.findByEmail(email);
-  if (!usuario) throw new Error("Credenciales inválidas");
+  async login(email: string, password: string): Promise<string> {
+    const usuario = await this.userRepository.findByEmail(email);
+    if (!usuario) throw new UnauthorizedError("Credenciales inválidas");
 
-  const passwordOk = await bcrypt.compare(password, usuario.passwordHash);
-  if (!passwordOk) {
-    throw new Error("Credenciales inválidas");
+    const passwordOk = await bcrypt.compare(password, usuario.passwordHash);
+    if (!passwordOk) throw new UnauthorizedError("Credenciales inválidas");
+
+    return jwt.sign(
+      { id: usuario.id, email: usuario.email, role: usuario.role },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn, algorithm: "HS256" },
+    );
   }
-
-  const token = jwt.sign(
-    { id: usuario.id, email: usuario.email, role: usuario.role },
-    config.jwtSecret,
-    { expiresIn: config.jwtExpiresIn, algorithm: "HS256" },
-  );
-
-  return token;
 }

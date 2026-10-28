@@ -1,6 +1,6 @@
 import { AddItemDto, UpdateItemDto } from "./cart.dto";
 import { Cart } from "./cart.entity";
-import { NotFoundError, ValidationError } from "./cart.errors";
+import { NotFoundError, PG_MAX_INT, ValidationError } from "../shared/errors";
 import { ICartRepository } from "./cart.repository.interface";
 
 export class CartService {
@@ -37,14 +37,14 @@ export class CartService {
   }
 
   private validateQuantity(q: unknown): void {
-    if (!Number.isInteger(q) || (q as number) < 1) {
-      throw new ValidationError('La cantidad debe ser entero >= 1');
+    if (!Number.isInteger(q) || (q as number) < 1 || (q as number) > PG_MAX_INT) {
+      throw new ValidationError(`La cantidad debe ser entero entre 1 y ${PG_MAX_INT}`);
     }
   }
 
   private validateId(id: unknown, name: string): void {
-    if (!Number.isInteger(id) || (id as number) < 1) {
-      throw new ValidationError(`${name} debe ser entero >= 1`);
+    if (!Number.isInteger(id) || (id as number) < 1 || (id as number) > PG_MAX_INT) {
+      throw new ValidationError(`${name} inválido`);
     }
   }
 }

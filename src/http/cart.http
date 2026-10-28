@@ -1,27 +1,52 @@
+### Configuración de Variables
+# Correr las requests en orden. Crea un usuario temporal, usa el primer
+# producto del catálogo (tiene que existir al menos uno) y borra el usuario
+# al final (su carrito se borra en cascada).
 @host = http://localhost:3000
-@userId = 10
 @cartsUrl = {{host}}/api/carts
-# usar id de un producto que exista
-@productId = 1
 
-### Login (obtiene el token)
-# @name login
-POST {{host}}/auth/login
+### 1. Crear usuario temporal
+# @name createUser
+POST {{host}}/api/users
 Content-Type: application/json
 
 {
-  "email": "Este.perez@example.com",
+  "name": "Cliente Carrito",
+  "email": "carrito.{{$timestamp}}@example.com",
   "password": "password123"
 }
 
 ###
+
+@userId = {{createUser.response.body.id}}
+
+### 2. Login (obtiene el token)
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{createUser.response.body.email}}",
+  "password": "password123"
+}
+
+###
+
 @token = {{login.response.body.token}}
 
-### Ver carrito del usuario
+### 3. Obtener un producto del catálogo
+# @name products
+GET {{host}}/api/products
+
+###
+
+@productId = {{products.response.body.$[0].id}}
+
+### 4. Ver carrito del usuario (vacío)
 GET {{cartsUrl}}/{{userId}}
 Authorization: Bearer {{token}}
 
-### Agregar producto al carrito
+### 5. Agregar producto al carrito
 POST {{cartsUrl}}/{{userId}}/items
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -31,7 +56,7 @@ Authorization: Bearer {{token}}
   "quantity": 2
 }
 
-### Cambiar cantidad del item
+### 6. Cambiar cantidad del item
 PATCH {{cartsUrl}}/{{userId}}/items/{{productId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -40,20 +65,24 @@ Authorization: Bearer {{token}}
   "quantity": 7
 }
 
-### Quitar item del carrito
+### 7. Quitar item del carrito
 DELETE {{cartsUrl}}/{{userId}}/items/{{productId}}
 Authorization: Bearer {{token}}
 
-### Vaciar carrito completo
+### 8. Vaciar carrito completo
 DELETE {{cartsUrl}}/{{userId}}/items
 Authorization: Bearer {{token}}
 
 ### Error: sin token (401)
 GET {{cartsUrl}}/{{userId}}
 
-### Error: token inválido (403)
+### Error: token inválido (401)
 GET {{cartsUrl}}/{{userId}}
 Authorization: Bearer token.falso.123
+
+### Error: carrito de otro usuario (403)
+GET {{cartsUrl}}/1
+Authorization: Bearer {{token}}
 
 ### Error: cantidad cero (400)
 POST {{cartsUrl}}/{{userId}}/items
@@ -90,4 +119,8 @@ Authorization: Bearer {{token}}
 
 ### Error: userId inválido (403 si no sos admin, 400 si sos admin)
 GET {{cartsUrl}}/abc
+Authorization: Bearer {{token}}
+
+### Limpieza: eliminar el usuario temporal
+DELETE {{host}}/api/users/{{userId}}
 Authorization: Bearer {{token}}

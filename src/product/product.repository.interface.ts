@@ -1,19 +1,9 @@
-import { Product } from './product.entity';
+import { Product } from "./product.entity";
+import { CreateProductDto, UpdateProductDto } from "./product.dto";
 
-export interface ProductRepositoryInterface {
-
-    findAll(): Promise<Product[]>;
-
-    insert(data: {
-        category_id: number | null;
-        brand: string;
-        model: string;
-        description: string | null;
-        price: number;
-        stock: number;
-        image_url: string | null;
-    }): Promise<Product>;
-
-    deleteById(id: number): Promise<Product | null>;
-
+export interface IProductRepository {
+  findAll(): Promise<Product[]>;
+  insert(data: CreateProductDto): Promise<Product>;
+  updateById(id: number, data: UpdateProductDto): Promise<Product | null>;
+  deleteById(id: number): Promise<Product | null>;
 }
