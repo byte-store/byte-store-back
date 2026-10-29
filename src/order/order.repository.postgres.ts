@@ -1,5 +1,5 @@
 import { Pool, PoolClient, QueryResultRow } from "pg";
-import { Order, OrderItem } from "./order.entity";
+import { Order, OrderItem, PaymentMethod } from "./order.entity";
 import { IOrderRepository } from "./order.repository.interface";
 import { ConflictError, ValidationError } from "../shared/errors";
 
@@ -12,6 +12,7 @@ export class PostgresOrderRepository implements IOrderRepository {
       orderId: row.order_id,
       productId: row.product_id,
       quantity: row.quantity,
+      // pg devuelve NUMERIC como string
       unitPrice: Number(row.unit_price),
     };
   }
@@ -22,12 +23,13 @@ export class PostgresOrderRepository implements IOrderRepository {
       userId: row.user_id,
       totalAmount: Number(row.total_amount),
       status: row.status,
+      paymentMethod: row.payment_method,
       createdAt: row.created_at,
       items,
     };
   }
 
-  async checkout(userId: number): Promise<Order> {
+  async checkout(userId: number, paymentMethod: PaymentMethod): Promise<Order> {
     const client: PoolClient = await this.pool.connect();
 
     try {
@@ -59,13 +61,13 @@ export class PostgresOrderRepository implements IOrderRepository {
       const cartItemIds: number[] = lines.map((l) => l.cart_item_id);
 
       const { rows: orderRows } = await client.query(
-        `INSERT INTO orders (user_id, total_amount)
-         SELECT $1, SUM(p.price * ci.quantity)
+        `INSERT INTO orders (user_id, total_amount, payment_method)
+         SELECT $1, SUM(p.price * ci.quantity), $3
            FROM cart_items ci
            JOIN products p ON p.id = ci.product_id
           WHERE ci.id = ANY($2::int[])
          RETURNING *`,
-        [userId, cartItemIds],
+        [userId, cartItemIds, paymentMethod],
       );
       const orderRow = orderRows[0];
 

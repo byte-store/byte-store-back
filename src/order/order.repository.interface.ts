@@ -1,5 +1,5 @@
-import { Order } from "./order.entity";
+import { Order, PaymentMethod } from "./order.entity";
 
 export interface IOrderRepository {
-  checkout(userId: number): Promise<Order>;
+  checkout(userId: number, paymentMethod: PaymentMethod): Promise<Order>;
 }

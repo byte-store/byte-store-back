@@ -79,7 +79,12 @@ POST {{host}}/orders
 
 ### 7. Checkout con carrito vacío (debe dar 400)
 POST {{host}}/orders
+Content-Type: application/json
 Authorization: Bearer {{clientToken}}
+
+{
+  "paymentMethod": "MERCADO_PAGO"
+}
 
 ### 8. Agregar 3 unidades al carrito (el carrito NO descuenta ni valida stock)
 POST {{host}}/carts/{{clientId}}/items
@@ -93,7 +98,12 @@ Authorization: Bearer {{clientToken}}
 
 ### 9. REGLA: quiebre de stock. Pide 3, hay 2 (debe dar 409)
 POST {{host}}/orders
+Content-Type: application/json
 Authorization: Bearer {{clientToken}}
+
+{
+  "paymentMethod": "MERCADO_PAGO"
+}
 
 ### 10. Verificar que el carrito quedó intacto tras el rechazo (sigue con 3 unidades)
 GET {{host}}/carts/{{clientId}}
@@ -108,9 +118,31 @@ Authorization: Bearer {{clientToken}}
   "quantity": 2
 }
 
-### 12. Checkout exitoso (debe dar 201, total 200000)
+### 12a. Checkout sin medio de pago (debe dar 400)
 POST {{host}}/orders
+Content-Type: application/json
 Authorization: Bearer {{clientToken}}
+
+{
+}
+
+### 12b. Checkout con medio de pago inválido (debe dar 400)
+POST {{host}}/orders
+Content-Type: application/json
+Authorization: Bearer {{clientToken}}
+
+{
+  "paymentMethod": "BITCOIN"
+}
+
+### 12. Checkout exitoso (debe dar 201, total 200000, paymentMethod NARANJA_X)
+POST {{host}}/orders
+Content-Type: application/json
+Authorization: Bearer {{clientToken}}
+
+{
+  "paymentMethod": "NARANJA_X"
+}
 
 ### 13. REGLA: limpieza automática. El carrito debe estar vacío
 GET {{host}}/carts/{{clientId}}

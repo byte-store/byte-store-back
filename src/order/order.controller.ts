@@ -8,7 +8,8 @@ export class OrderController {
 
   checkout = async (req: AuthRequest, res: Response) => {
     try {
-      const order = await this.service.checkout(req.usuario!.id);
+      const { paymentMethod } = req.body ?? {};
+      const order = await this.service.checkout(req.usuario!.id, { paymentMethod });
       res.status(201).json(order);
     } catch (e) { handleError(e, res); }
   };
