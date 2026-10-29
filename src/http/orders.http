@@ -1,0 +1,120 @@
+### Configuración de Variables
+# Correr las requests EN ORDEN. Crea sus propios datos de prueba:
+# un admin, un producto con stock 2 y un cliente.
+# Necesita ADMIN_SECRET_KEY en el .env.
+@host = http://localhost:3000/api
+@adminSecretKey = {{$dotenv ADMIN_SECRET_KEY}}
+
+### 1. Crear admin temporal
+# @name createAdmin
+POST {{host}}/users/admin
+Content-Type: application/json
+
+{
+  "name": "Admin Ordenes",
+  "email": "admin.ordenes.{{$timestamp}}@utn.edu",
+  "password": "adminSecurePassword",
+  "secretKey": "{{adminSecretKey}}"
+}
+
+### 2. Login como admin
+# @name loginAdmin
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{createAdmin.response.body.email}}",
+  "password": "adminSecurePassword"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 3. Crear un producto con stock 2 (para probar el quiebre de stock)
+# @name createProduct
+POST {{host}}/products
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "categoryId": null,
+  "brand": "Xiaomi",
+  "model": "Test Checkout",
+  "description": "Producto de prueba para el checkout",
+  "price": 100000,
+  "stock": 2,
+  "imageUrl": null
+}
+
+###
+@productId = {{createProduct.response.body.id}}
+
+### 4. Crear cliente
+# @name createClient
+POST {{host}}/users
+Content-Type: application/json
+
+{
+  "name": "Cliente Ordenes",
+  "email": "cliente.ordenes.{{$timestamp}}@example.com",
+  "password": "clientePassword"
+}
+
+### 5. Login como cliente
+# @name loginClient
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{createClient.response.body.email}}",
+  "password": "clientePassword"
+}
+
+###
+@clientToken = {{loginClient.response.body.token}}
+@clientId = {{createClient.response.body.id}}
+
+### 6. Checkout SIN token (debe dar 401)
+POST {{host}}/orders
+
+### 7. Checkout con carrito vacío (debe dar 400)
+POST {{host}}/orders
+Authorization: Bearer {{clientToken}}
+
+### 8. Agregar 3 unidades al carrito (el carrito NO descuenta ni valida stock)
+POST {{host}}/carts/{{clientId}}/items
+Content-Type: application/json
+Authorization: Bearer {{clientToken}}
+
+{
+  "productId": {{productId}},
+  "quantity": 3
+}
+
+### 9. REGLA: quiebre de stock. Pide 3, hay 2 (debe dar 409)
+POST {{host}}/orders
+Authorization: Bearer {{clientToken}}
+
+### 10. Verificar que el carrito quedó intacto tras el rechazo (sigue con 3 unidades)
+GET {{host}}/carts/{{clientId}}
+Authorization: Bearer {{clientToken}}
+
+### 11. Bajar la cantidad a 2
+PATCH {{host}}/carts/{{clientId}}/items/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{clientToken}}
+
+{
+  "quantity": 2
+}
+
+### 12. Checkout exitoso (debe dar 201, total 200000)
+POST {{host}}/orders
+Authorization: Bearer {{clientToken}}
+
+### 13. REGLA: limpieza automática. El carrito debe estar vacío
+GET {{host}}/carts/{{clientId}}
+Authorization: Bearer {{clientToken}}
+
+### 14. REGLA: descuento de stock. Buscar "Test Checkout" en la lista: stock 0
+GET {{host}}/products
