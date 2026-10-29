@@ -6,6 +6,7 @@ import { buildProductRouter } from "./product/product.routes";
 import { buildUserRouter } from "./users/users.routes";
 import { buildCartRouter } from "./cart/cart.routes";
 import { handleError } from "./shared/http";
+import { buildOrderRouter } from "./order/order.routes";
 
 export class App {
   public readonly app: Application;
@@ -18,12 +19,12 @@ export class App {
     this.app.use("/api/products", buildProductRouter(pool));
     this.app.use("/api/users", buildUserRouter(pool));
     this.app.use("/api/carts", buildCartRouter(pool));
-
+    this.app.use("/api/orders", buildOrderRouter(pool));
+    
     this.app.use((_req: Request, res: Response) => {
       res.status(404).json({ message: "Ruta no encontrada" });
     });
 
-    // Errores no capturados (ej: JSON mal formado en el body)
     this.app.use(
       (err: unknown, _req: Request, res: Response, _next: NextFunction) =>
         handleError(err, res),
