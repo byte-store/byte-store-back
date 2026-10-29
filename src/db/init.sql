@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount    NUMERIC(12, 2) NOT NULL CHECK (total_amount >= 0),
     status          VARCHAR(20) NOT NULL DEFAULT 'COMPLETED'
                         CHECK (status IN ('COMPLETED', 'CANCELLED')),
+    payment_method  VARCHAR(20) NOT NULL
+                        CHECK (payment_method IN ('MERCADO_PAGO', 'NARANJA_X', 'TARJETA')),
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
