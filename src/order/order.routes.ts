@@ -12,5 +12,6 @@ export function buildOrderRouter(pool: Pool): Router {
 
   const router = Router();
   router.post("/", verificarToken, controller.checkout);
+  router.get("/", verificarToken, controller.list);
   return router;
 }

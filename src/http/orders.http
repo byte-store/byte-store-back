@@ -150,3 +150,11 @@ Authorization: Bearer {{clientToken}}
 
 ### 14. REGLA: descuento de stock. Buscar "Test Checkout" en la lista: stock 0
 GET {{host}}/products
+
+### 15. Historial de compras del cliente (debe dar 200 con la orden del paso 12,
+### con marca, modelo y precio pagado en cada ítem)
+GET {{host}}/orders
+Authorization: Bearer {{clientToken}}
+
+### 16. Historial SIN token (debe dar 401)
+GET {{host}}/orders

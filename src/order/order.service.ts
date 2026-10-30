@@ -1,5 +1,5 @@
 import { IOrderRepository } from "./order.repository.interface";
-import { Order, PAYMENT_METHODS, PaymentMethod } from "./order.entity";
+import { Order, OrderWithProducts, PAYMENT_METHODS, PaymentMethod } from "./order.entity";
 import { CheckoutDto } from "./order.dto";
 import { ValidationError } from "../shared/errors";
 
@@ -13,5 +13,9 @@ export class OrderService {
       );
     }
     return this.repo.checkout(userId, dto.paymentMethod);
+  }
+
+  async getMyOrders(userId: number): Promise<OrderWithProducts[]> {
+    return this.repo.findByUserId(userId);
   }
 }

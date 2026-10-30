@@ -1,5 +1,11 @@
 import { Pool, PoolClient, QueryResultRow } from "pg";
-import { Order, OrderItem, PaymentMethod } from "./order.entity";
+import {
+  Order,
+  OrderItem,
+  OrderItemDetail,
+  OrderWithProducts,
+  PaymentMethod,
+} from "./order.entity";
 import { IOrderRepository } from "./order.repository.interface";
 import { ConflictError, ValidationError } from "../shared/errors";
 
@@ -12,12 +18,14 @@ export class PostgresOrderRepository implements IOrderRepository {
       orderId: row.order_id,
       productId: row.product_id,
       quantity: row.quantity,
-      // pg devuelve NUMERIC como string
       unitPrice: Number(row.unit_price),
     };
   }
 
-  private toOrder(row: QueryResultRow, items: OrderItem[]): Order {
+  private toOrder<T extends OrderItem>(
+    row: QueryResultRow,
+    items: T[],
+  ): Omit<Order, "items"> & { items: T[] } {
     return {
       id: row.id,
       userId: row.user_id,
@@ -107,5 +115,35 @@ export class PostgresOrderRepository implements IOrderRepository {
     } finally {
       client.release();
     }
+  }
+
+  async findByUserId(userId: number): Promise<OrderWithProducts[]> {
+    const { rows: orderRows } = await this.pool.query(
+      `SELECT * FROM orders
+        WHERE user_id = $1
+        ORDER BY created_at DESC, id DESC`,
+      [userId],
+    );
+    if (orderRows.length === 0) return [];
+
+    const orderIds: number[] = orderRows.map((o) => o.id);
+    const { rows: itemRows } = await this.pool.query(
+      `SELECT oi.*, p.brand, p.model
+         FROM order_items oi
+         JOIN products p ON p.id = oi.product_id
+        WHERE oi.order_id = ANY($1::int[])
+        ORDER BY oi.id`,
+      [orderIds],
+    );
+
+    const itemsByOrder = new Map<number, OrderItemDetail[]>();
+    for (const r of itemRows) {
+      const item: OrderItemDetail = { ...this.toItem(r), brand: r.brand, model: r.model };
+      const list = itemsByOrder.get(item.orderId) ?? [];
+      list.push(item);
+      itemsByOrder.set(item.orderId, list);
+    }
+
+    return orderRows.map((o) => this.toOrder(o, itemsByOrder.get(o.id) ?? []));
   }
 }

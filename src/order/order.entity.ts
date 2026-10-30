@@ -21,3 +21,12 @@ export interface Order {
   createdAt: Date;
   items: OrderItem[];
 }
+
+export interface OrderItemDetail extends OrderItem {
+  brand: string;
+  model: string;
+}
+
+export interface OrderWithProducts extends Omit<Order, "items"> {
+  items: OrderItemDetail[];
+}
