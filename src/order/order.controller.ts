@@ -13,4 +13,11 @@ export class OrderController {
       res.status(201).json(order);
     } catch (e) { handleError(e, res); }
   };
+  
+  list = async (req: AuthRequest, res: Response) => {
+    try {
+      const orders = await this.service.getMyOrders(req.usuario!.id);
+      res.json(orders);
+    } catch (e) { handleError(e, res); }
+  };
 }
