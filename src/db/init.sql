@@ -1,4 +1,7 @@
 -- TABLA: users
+-- Almacena tanto a "user" como "admin". El rol se valida
+-- a nivel DB (CHECK) y luego se replica en el JWT.
+-- =========================================================
 CREATE TABLE IF NOT EXISTS users (
     id              SERIAL PRIMARY KEY,
     name       VARCHAR(150) NOT NULL,
@@ -9,6 +12,10 @@ CREATE TABLE IF NOT EXISTS users (
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- El email es único sin distinguir mayúsculas/minúsculas
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_idx ON users (LOWER(email));
+
+-- =========================================================
 -- TABLA: categories
 CREATE TABLE IF NOT EXISTS categories (
     id              SERIAL PRIMARY KEY,
@@ -48,6 +55,8 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount    NUMERIC(12, 2) NOT NULL CHECK (total_amount >= 0),
     status          VARCHAR(20) NOT NULL DEFAULT 'COMPLETED'
                         CHECK (status IN ('COMPLETED', 'CANCELLED')),
+    payment_method  VARCHAR(20) NOT NULL
+                        CHECK (payment_method IN ('MERCADO_PAGO', 'NARANJA_X', 'TARJETA')),
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

@@ -1,20 +1,40 @@
 import { Router } from "express";
-import { UserController } from "./users.controller";
-import { UserService } from "./users.service";
+import { Pool } from "pg";
 import { PostgresUserRepository } from "./users.repository.postgres";
-import { pool } from "../config";
+import { UserService } from "./users.service";
+import { UserController } from "./users.controller";
+import {
+  verificarToken,
+  requiereRol,
+  verificarPropietario,
+} from "../auth/auth.middleware";
 
-const router = Router();
+export function buildUserRouter(pool: Pool): Router {
+  const repo = new PostgresUserRepository(pool);
+  const service = new UserService(repo);
+  const controller = new UserController(service);
 
-const userRepository = new PostgresUserRepository(pool);
-const userService = new UserService(userRepository);
-const userController = new UserController(userService);
-
-router.post("/admin", (req, res) => userController.createAdmin(req, res));
-router.post("/", (req, res) => userController.createUser(req, res));
-router.get("/", (req, res) => userController.getAll(req, res));
-router.get("/:id", (req, res) => userController.getById(req, res));
-router.put("/:id", (req, res) => userController.updateUser(req, res));
-router.delete("/:id", (req, res) => userController.deleteUser(req, res));
-
-export default router;
+  const router = Router();
+  router.post("/admin", controller.createAdmin);
+  router.post("/", controller.createUser);
+  router.get("/", verificarToken, requiereRol("admin"), controller.getAll);
+  router.get(
+    "/:userId",
+    verificarToken,
+    verificarPropietario,
+    controller.getById,
+  );
+  router.put(
+    "/:userId",
+    verificarToken,
+    verificarPropietario,
+    controller.updateUser,
+  );
+  router.delete(
+    "/:userId",
+    verificarToken,
+    verificarPropietario,
+    controller.deleteUser,
+  );
+  return router;
+}

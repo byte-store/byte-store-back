@@ -1,82 +1,123 @@
-### Listar catálogo completo de productos
-GET http://localhost:3000/products
-Content-Type: application/json
+### Configuración de Variables
+# Correr las requests en orden. Crea un admin temporal (necesita
+# ADMIN_SECRET_KEY en el .env) y lo borra al final.
+@baseUrl = http://localhost:3000/api/products
+@usersUrl = http://localhost:3000/api/users
+@authUrl = http://localhost:3000/api/auth
+@adminSecretKey = {{$dotenv ADMIN_SECRET_KEY}}
 
-### Crear producto nuevo
-### (SIN protección - pendiente middleware JWT + rol ADMIN)
-POST http://localhost:3000/products
-Content-Type: application/json
-
-{
-    "category_id": null,
-    "brand": "Xiaomi",
-    "model": "Redmi Note 18",
-    "description": "gama media, 512GB",
-    "price": 800000,
-    "stock": 25,
-    "image_url": "https://ejemplo.com/redmi-note-18.jpg"
-}
-
-### Caso de error: falta un campo obligatorio (debería devolver 400)
-POST http://localhost:3000/products
+### 1. Crear admin temporal
+# @name createAdmin
+POST {{usersUrl}}/admin
 Content-Type: application/json
 
 {
-    "brand": "Xiaomi",
-    "description": "Falta model, price y stock"
+  "name": "Admin Productos",
+  "email": "admin.productos.{{$timestamp}}@utn.edu",
+  "password": "adminSecurePassword",
+  "secretKey": "{{adminSecretKey}}"
 }
 
-### Caso de error: precio negativo (debería devolver 400)
-POST http://localhost:3000/products
+### 2. Login como admin
+# @name loginAdmin
+POST {{authUrl}}/login
 Content-Type: application/json
 
 {
-    "brand": "Xiaomi",
-    "model": "Redmi 18",
-    "description": "Precio inválido a propósito",
-    "price": -100,
-    "stock": 10,
-    "image_url": null
+  "email": "{{createAdmin.response.body.email}}",
+  "password": "adminSecurePassword"
+
 }
 
-### Actualizar producto 
-### (SIN protección - pendiente middleware JWT + rol ADMIN)
-PUT http://localhost:3000/products/2
+###
+
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 3. Listar catálogo (público, sin token)
+GET {{baseUrl}}
+
+### 4. Crear producto (requiere token de admin)
+# @name createProduct
+POST {{baseUrl}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "categoryId": null,
+  "brand": "Xiaomi",
+  "model": "Redmi Note 18",
+  "description": "Smartphone gama media, 512GB",
+  "price": 800000,
+  "stock": 25,
+  "imageUrl": "https://ejemplo.com/redmi-note-18.jpg"
+}
+
+###
+
+@productId = {{createProduct.response.body.id}}
+
+### 5. Intentar crear producto SIN token (401)
+POST {{baseUrl}}
 Content-Type: application/json
 
 {
-    "price": 750000,
-    "stock": 30
+  "brand": "Hacker",
+  "model": "Intento sin token",
+  "description": "No debería crearse",
+  "price": 1,
+  "stock": 1
 }
 
-### Caso de error: no se manda ningún campo (debería devolver 400)
-PUT http://localhost:3000/products/1
+### 6. Intentar crear producto con precio inválido (400)
+POST {{baseUrl}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "brand": "Xiaomi",
+  "model": "Precio negativo",
+  "price": -10,
+  "stock": 1
+}
+
+### 7. Modificar producto (requiere token de admin, solo cambia los campos enviados)
+PUT {{baseUrl}}/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "price": 750000,
+  "stock": 20
+}
+
+### 8. Intentar modificar SIN token (401)
+PUT {{baseUrl}}/{{productId}}
 Content-Type: application/json
 
 {
+  "price": 1
 }
 
-### Caso de error: precio negativo (debería devolver 400)
-PUT http://localhost:3000/products/1
+### 9. Intentar modificar con stock inválido (400)
+PUT {{baseUrl}}/{{productId}}
 Content-Type: application/json
+Authorization: Bearer {{adminToken}}
 
 {
-    "price": -50
+  "stock": -5
 }
 
-### Caso de error: actualizar un id que no existe (debería devolver 404)
-PUT http://localhost:3000/products/99999
-Content-Type: application/json
+### 10. Intentar eliminar SIN token (401)
+DELETE {{baseUrl}}/{{productId}}
 
-{
-    "stock": 5
-}
+### 11. Eliminar el producto creado (requiere token de admin)
+DELETE {{baseUrl}}/{{productId}}
+Authorization: Bearer {{adminToken}}
 
-### Eliminar producto por id 
-### (SIN protección - pendiente middleware JWT + rol ADMIN)
-DELETE http://localhost:3000/products/2
-Content-Type: application/json
+### 12. Eliminar de nuevo el mismo producto (404)
+DELETE {{baseUrl}}/{{productId}}
+Authorization: Bearer {{adminToken}}
 
-### Caso de error: eliminar un id que no existe (debería devolver 404)
-DELETE http://localhost:3000/products/99999
-Content-Type: application/json
+### 13. Limpieza: eliminar el admin temporal
+DELETE {{usersUrl}}/{{createAdmin.response.body.id}}
+Authorization: Bearer {{adminToken}}

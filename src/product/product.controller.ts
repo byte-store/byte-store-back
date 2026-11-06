@@ -1,126 +1,56 @@
-import { Request, Response } from 'express';
-import { ProductService } from './product.service';
-import { ProductRepositoryPostgres } from './product.repository.postgres';
+import { Request, Response } from "express";
+import { ProductService } from "./product.service";
+import { handleError, parseId } from "../shared/http";
 
 export class ProductController {
+  constructor(private readonly service: ProductService) {}
 
-    private productService: ProductService;
+  getAll = async (_req: Request, res: Response) => {
+    try {
+      res.json(await this.service.getAll());
+    } catch (e) { handleError(e, res); }
+  };
 
-    constructor() {
-        const productRepository = new ProductRepositoryPostgres();
-        this.productService = new ProductService(productRepository);
-    }
+  create = async (req: Request, res: Response) => {
+    try {
+      const { categoryId, brand, model, description, price, stock, imageUrl } =
+        req.body ?? {};
+      const product = await this.service.create({
+        categoryId: categoryId ?? null,
+        brand,
+        model,
+        description: description ?? null,
+        price,
+        stock,
+        imageUrl: imageUrl ?? null,
+      });
+      res.status(201).json(product);
+    } catch (e) { handleError(e, res); }
+  };
 
-    public getAll = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const products = await this.productService.getAll();
-            res.status(200).json(products);
-        } catch (error) {
-            console.error('Error al obtener productos:', error);
-            res.status(500).json({ message: 'Error interno al obtener productos' });
-        }
-    };
+  update = async (req: Request, res: Response) => {
+    try {
+      const id = parseId(req.params.id, "id");
+      const { categoryId, brand, model, description, price, stock, imageUrl } =
+        req.body ?? {};
+      const product = await this.service.update(id, {
+        categoryId,
+        brand,
+        model,
+        description,
+        price,
+        stock,
+        imageUrl,
+      });
+      res.json(product);
+    } catch (e) { handleError(e, res); }
+  };
 
-    // Este endpoint debe estar protegido por middleware de autenticación JWT + verificación de rol ADMIN.
-    // CUALQUIERA puede crear productos. Pendiente hasta que exista el módulo de autenticación.
-    public create = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const { category_id, brand, model, description, price, stock, image_url } = req.body;
-
-            if (!brand || !model || price === undefined || stock === undefined) {
-                res.status(400).json({ message: 'Faltan campos obligatorios: brand, model, price, stock' });
-                return;
-            }
-
-            const newProduct = await this.productService.create({
-                category_id: category_id ?? null,
-                brand,
-                model,
-                description: description ?? null,
-                price,
-                stock,
-                image_url: image_url ?? null,
-            });
-
-            res.status(201).json(newProduct);
-        } catch (error) {
-            console.error('Error al crear producto:', error);
-            const message = error instanceof Error ? error.message : 'Error interno al crear producto';
-            res.status(400).json({ message });
-        }
-    };
-
-    //Este endpoint debe estar protegido por middleware de autenticación JWT + verificación de rol ADMIN.
-    // CUALQUIERA puede eliminar productos. Pendiente hasta que exista el módulo de autenticación.
-    public delete = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const id = Number(req.params.id);
-
-            if (isNaN(id)) {
-                res.status(400).json({ message: 'El id debe ser un número' });
-                return;
-            }
-
-            const deletedProduct = await this.productService.delete(id);
-
-            if (!deletedProduct) {
-                res.status(404).json({ message: `No existe un producto con id ${id}` });
-                return;
-            }
-
-            res.status(200).json({ message: 'Producto eliminado correctamente', product: deletedProduct });
-        } catch (error) {
-            console.error('Error al eliminar producto:', error);
-            res.status(500).json({ message: 'Error interno al eliminar producto' });
-        }
-    };
-
-    //Este endpoint debe estar protegido por middleware de autenticación JWT + verificación de rol ADMIN.
-    // CUALQUIERA puede actualizar productos. Pendiente hasta que exista el módulo de autenticación.
-    public update = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const id = Number(req.params.id);
-
-            if (isNaN(id)) {
-                res.status(400).json({ message: 'El id debe ser un número' });
-                return;
-            }
-
-            const { category_id, brand, model, description, price, stock, image_url } = req.body;
-
-            if (
-                category_id === undefined &&
-                brand === undefined &&
-                model === undefined &&
-                description === undefined &&
-                price === undefined &&
-                stock === undefined &&
-                image_url === undefined
-            ) {
-                res.status(400).json({ message: 'Debés enviar al menos un campo para actualizar' });
-                return;
-            }
-
-            const updatedProduct = await this.productService.update(id, {
-                category_id,
-                brand,
-                model,
-                description,
-                price,
-                stock,
-                image_url,
-            });
-
-            if (!updatedProduct) {
-                res.status(404).json({ message: `No existe un producto con id ${id}` });
-                return;
-            }
-
-            res.status(200).json(updatedProduct);
-        } catch (error) {
-            console.error('Error al actualizar producto:', error);
-            const message = error instanceof Error ? error.message : 'Error interno al actualizar producto';
-            res.status(400).json({ message });
-        }
-    };
+  delete = async (req: Request, res: Response) => {
+    try {
+      const id = parseId(req.params.id, "id");
+      const product = await this.service.delete(id);
+      res.json({ message: "Producto eliminado correctamente", product });
+    } catch (e) { handleError(e, res); }
+  };
 }

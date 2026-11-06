@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { SignOptions } from "jsonwebtoken";
 import { Pool } from "pg";
 
 function requireEnv(key: string): string {
@@ -13,6 +14,11 @@ function requireEnv(key: string): string {
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
+  jwtSecret: requireEnv("JWT_SECRET"),
+  jwtExpiresIn: (process.env.JWT_EXPIRES_IN ||
+    "1h") as SignOptions["expiresIn"],
+  // Opcional: si no está, no se pueden crear administradores
+  adminSecretKey: process.env.ADMIN_SECRET_KEY,
 };
 
 export const pool = new Pool({
