@@ -5,5 +5,6 @@ ENV POSTGRES_PASSWORD=bytestore_pass
 ENV POSTGRES_DB=bytestore_db
 
 COPY src/db/init.sql /docker-entrypoint-initdb.d/init.sql
+COPY src/db/seed.sql /docker-entrypoint-initdb.d/seed.sql
 
 EXPOSE 5432
